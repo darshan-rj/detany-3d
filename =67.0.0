@@ -1,0 +1,8 @@
+Collecting cython
+  Downloading cython-3.1.6-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (4.0 kB)
+Requirement already satisfied: pyyaml in /usr/local/lib/python3.10/dist-packages (6.0.3)
+Requirement already satisfied: setuptools in /usr/local/lib/python3.10/dist-packages (80.9.0)
+Downloading cython-3.1.6-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (3.4 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.4/3.4 MB 8.1 MB/s  0:00:00
+Installing collected packages: cython
+Successfully installed cython-3.1.6

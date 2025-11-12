@@ -50,11 +50,11 @@ class DetAny3DDataset(Dataset):
             raise NotImplementedError('no test mode yet')
         
         if dataset_name is not None:
-            # 仅加载指定数据集 (val)
+            # Only load the specified dataset (for validation)
             dataset_info = self.dataset_dict[dataset_name]
             self._load_single_dataset(dataset_name, dataset_info)
         else:
-            # 加载所有数据集 (train)
+            # Load all datasets (for training)
             for dataset_name in self.dataset_dict.keys():
                 dataset_info = self.dataset_dict[dataset_name]
                 self._load_single_dataset(dataset_name, dataset_info)
@@ -74,7 +74,7 @@ class DetAny3DDataset(Dataset):
             self.category_id = json.load(f)
 
     def _load_single_dataset(self, dataset_name, dataset_info):
-        """加载单个数据集的功能，供重复使用"""
+        """Function to load a single dataset, for reuse."""
         self.dataset_name_list.append(dataset_name)
         self.pkl_path_list.append(dataset_info.pkl_path)
         
@@ -166,6 +166,7 @@ class DetAny3DDataset(Dataset):
         original_size = tuple(todo_img.shape[:-1])
 
         depth_path = instance['depth_path']
+        # depth_path = instance.get('depth_path', None)
         
         if self.cfg.dataset.hack_img_path:
             depth_path = None
@@ -178,9 +179,12 @@ class DetAny3DDataset(Dataset):
         cropped_blank_W = int((original_size[1] - cropped_size[1]) / 2)
         
         # bx, by will change if cropped
-        K[0, 0, 2] = K[0, 0, 2] - cropped_blank_W
-        K[0, 1, 2] = K[0, 1, 2] - cropped_blank_H
+        # K[0, 0, 2] = K[0, 0, 2] - cropped_blank_W
+        # K[0, 1, 2] = K[0, 1, 2] - cropped_blank_H
 
+        # Changed to check with nuScenes_test.pkl
+        K[0, 2] = K[0, 2] - cropped_blank_W
+        K[1, 2] = K[1, 2] - cropped_blank_H
         # resize the long edge to target size
         img = img.unsqueeze(0)
         img = self.sam_trans.apply_image_torch(img)
@@ -249,11 +253,13 @@ class DetAny3DDataset(Dataset):
         return_dict.update({
             # input for dino
             "image_for_dino": img_for_dino,})
+        
+        # print(f"K Value: {return_dict['K']}")
 
         return return_dict
 
     def __len__(self):
-        return self.idx_cum[-1]
+        return int(self.idx_cum[-1])
     
     def generate_obj_list(self, instance, K, before_pad_size, original_size, raw_image, dataset_name):
         
@@ -412,35 +418,37 @@ class DetAny3DDataset(Dataset):
         
         if img.dim() == 4:
             img = img.squeeze(0)
-        h, w = img.shape[1:3]  # 假设形状为 [C, H, W]
+        h, w = img.shape[1:3]  # Assuming shape is [C, H, W]
         assert max(h, w) % 112 == 0, "target_size must be divisible by 112"
 
-        # 计算裁剪后尺寸，确保可以被 14 整除
+        # Calculate cropped size, ensuring it is divisible by 14
         new_h = (h // 14) * 14
         new_w = (w // 14) * 14
 
-        # 计算裁剪区域的中心
+        # Calculate the center of the crop area
         center_h, center_w = h // 2, w // 2
 
-        # 计算裁剪的起始和结束索引
+        # Calculate the start and end indices for cropping
         start_h = center_h - new_h // 2
         start_w = center_w - new_w // 2
 
-        # 按照中心裁剪图像和深度图
+        # Crop the image and depth map from the center
         img_cropped = img[:, start_h:start_h + new_h, start_w:start_w + new_w]
         depth_cropped = depth[start_h:start_h + new_h, start_w:start_w + new_w]
 
         K_cropped = None
-        # 更新相机内参 K
+        # Update camera intrinsics K
         if K is not None:
-            K_cropped = K.clone()  # 假设 K 是一个 numpy 数组
-            K_cropped[0, 0, 2] -= (start_w)  # 更新 x 坐标
-            K_cropped[0, 1, 2] -= (start_h)  # 更新 y 坐标
+            K_cropped = K.clone()  # Assuming K is a tensor
+            # K_cropped[0, 0, 2] -= (start_w)  # Update x coordinate
+            # K_cropped[0, 1, 2] -= (start_h)
+            K_cropped[0, 2] -= (start_w)  # Update x coordinate
+            K_cropped[1, 2] -= (start_h)  # Update y coordinate
 
         return img_cropped.unsqueeze(0), depth_cropped, K_cropped
 
     def get_point_coords_from_mask(self, mask_path, num_point_prompts, original_point_coord_tensor, bbox, min_area=50, edge_margin=5):
-        obj_mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
+        obj_mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE) # type: ignore
         num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(obj_mask, connectivity=8)
         
         valid_regions = []
@@ -820,7 +828,7 @@ class DetAny3DDataset(Dataset):
 
                 return expanded_box.round().to(torch.int)
 
-            # 扩展后的 box（假设原图尺寸为 before_pad_size）
+            # Expanded box (assuming original image size is before_pad_size)
             box_coords = expand_box(box_coords, scale=0.1, image_size=before_pad_size)
 
             todo_dict = {

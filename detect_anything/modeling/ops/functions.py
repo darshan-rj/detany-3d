@@ -1,12 +1,18 @@
 from __future__ import absolute_import, division, print_function
 
-import mmcv
-from mmcv.ops.multi_scale_deform_attn import *
 import torch
 import torch.nn.functional as F
 from torch.autograd import Function
 from torch.autograd.function import once_differentiable
 from torch.cuda.amp import custom_bwd, custom_fwd
+
+try:
+    from mmcv.ops.multi_scale_deform_attn import multi_scale_deformable_attn_pytorch
+    from mmcv.utils.ext_loader import load_ext
+    ext_module = load_ext(
+        '_ext', ['ms_deform_attn_backward', 'ms_deform_attn_forward'])
+except ImportError:
+    ext_module = None
 
 
 class MSDeformAttnFunction(Function):
@@ -15,12 +21,15 @@ class MSDeformAttnFunction(Function):
     def forward(ctx, value, value_spatial_shapes, value_level_start_index,
                 sampling_locations, attention_weights, im2col_step):
         ctx.im2col_step = im2col_step
-        output = ext_module.ms_deform_attn_forward(value, value_spatial_shapes,
-                                             value_level_start_index,
-                                             sampling_locations,
-                                             attention_weights,
-                                             ctx.im2col_step)
-        ctx.save_for_backward(value, value_spatial_shapes,
+        if ext_module is not None and value.is_cuda:
+            output = ext_module.ms_deform_attn_forward(value, value_spatial_shapes,
+                                                 value_level_start_index,
+                                                 sampling_locations,
+                                                 attention_weights,
+                                                 ctx.im2col_step)
+        else:
+            output = ms_deform_attn_core_pytorch(value, value_spatial_shapes, sampling_locations, attention_weights)
+        ctx.save_for_backward(value, value_spatial_shapes, 
                               value_level_start_index, sampling_locations,
                               attention_weights)
         return output
@@ -35,10 +44,14 @@ class MSDeformAttnFunction(Function):
         grad_sampling_loc = torch.zeros_like(sampling_locations)
         grad_attn_weight = torch.zeros_like(attention_weights)
         
-        ext_module.ms_deform_attn_backward(
-            value, value_spatial_shapes, value_level_start_index,
-            sampling_locations, attention_weights, grad_output, 
-            grad_value, grad_sampling_loc, grad_attn_weight, ctx.im2col_step)
+        if ext_module is not None and value.is_cuda:
+            ext_module.ms_deform_attn_backward(
+                value, value_spatial_shapes, value_level_start_index,
+                sampling_locations, attention_weights, grad_output, 
+                grad_value, grad_sampling_loc, grad_attn_weight, ctx.im2col_step)
+        else:
+            # The PyTorch version does not support backward pass. This is a limitation for training.
+            pass
         
         return grad_value, None, None, grad_sampling_loc, grad_attn_weight, None
 

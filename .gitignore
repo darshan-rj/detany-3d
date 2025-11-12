@@ -42,6 +42,8 @@ visbug/
 DepthAnythingV2/metric_depth
 DepthAnythingV2/assets
 DepthAnythingV2/checkpoints
+detectron2/
+GroundingDINO/
 # Editor temporaries
 *.swn
 *.swo
@@ -57,3 +59,6 @@ _darcs
 **/node_modules
 yarn.lock
 package-lock.json
+
+Traces_NOA/
+Traces_NOA_structured/

@@ -1,0 +1,76 @@
+# ==============================================================================
+# DetAny3D Model Configuration (Reconstructed)
+# ==============================================================================
+
+# --- Execution Settings ---
+resume: "/app/DetAny3D/checkpoints/detany3d_ckpts/zero_shot_category_ckpt-004.pth"
+# resume: "./exps/develop/1110-040452/checkpoint_9.pth" # Alternate resume path
+
+output_rotation_matrix: True
+contain_edge_obj: False
+unlock_all_backbone: False
+
+tune_with_prompt: True
+inference_with_prompt: True
+
+max_depth: 100
+
+# --- DINOv2 Backbone Settings (Used for initialization) ---
+# NOTE: The model expects DINO weights to match the architecture (Depth 32, Dim 1280)
+# This path points to ViT-L/14, which causes the "only support depth 32" error.
+# The user needs to verify/change this checkpoint path.
+dino_dim: 1024 # Dimension of DINOv2 feature map (ViT-L/14)
+# dino_dim: 768 # Alternate DINO feature dimension
+dino_path: "/app/DetAny3D/checkpoints/dino_ckpts/dinov2_vitl14_pretrain.pth" 
+
+# --- MODEL Architecture Definition ---
+model:
+  # Overall Model Type (Likely the primary backbone, SAM ViT-H)
+  type: 'vit_h'
+  checkpoint: '/app/DetAny3D/checkpoints/sam_ckpts/sam_vit_h_4b8939.pth'
+  pad: 896 # Padding size for the input image
+  
+  # Image Encoder (SAM ViT-H configuration)
+  image_encoder:
+    img_size: 1024
+    patch_size: 16
+    in_chans: 3
+    embed_dim: 1280  # ViT-H dimension
+    depth: 32        # ViT-H depth (CRITICAL: Must match DINO checkpoint)
+    num_heads: 16
+    mlp_ratio: 4.0
+    out_chans: 256
+    qkv_bias: True
+    norm_layer: nn.LayerNorm
+    act_layer: nn.GELU
+    use_abs_pos: True
+    use_rel_pos: True
+    rel_pos_zero_init: True
+    window_size: 14
+    global_attn_indexes: [7, 15, 23, 31]
+    # Alternate global_attn_indexes: [2, 5, 8, 11]
+
+  # Prompt Encoder (Architecture not detailed, assumes defaults)
+  prompt_encoder: {}
+
+  # Mask Decoder (Architecture not detailed, assumes defaults)
+  mask_decoder:
+    num_multimask_outputs: 3
+    type: MaskDecoder
+  
+  # Freeze Settings (Specify which parts of the network to train/freeze)
+  freeze:
+    image_encoder: False
+    prompt_encoder: False
+    mask_decoder: False
+  
+  # Adapter and Output Settings
+  additional_adapter: True
+  vit_pad_mask: True
+  original_sam: False
+  multi_level_box_output: 3
+
+# --- DATASET and Preprocessing Settings ---
+dataset:
+  pixel_mean: [104.952, 107.015, 106.043]
+  pixel_std: [51.078, 51.25, 55.444]

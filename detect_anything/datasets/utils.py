@@ -609,9 +609,9 @@ def rotation_6d_to_matrix(d6: torch.Tensor) -> torch.Tensor:
     return torch.stack((b1, b2, b3), dim=-2)    
 
 def generate_instance_id(obj, img_path):
-    # 通过拼接一些对象特征生成字符串并计算哈希值
+    # Generate a string by concatenating some object features and calculate the hash value
     unique_string = f"{img_path}_{obj['center_cam']}"
-    # 生成哈希值，并使用十六进制表示
+    # Generate a hash value and represent it in hexadecimal
     return hashlib.md5(unique_string.encode('utf-8')).hexdigest()
 
 def angle2class(angle):
@@ -634,15 +634,15 @@ def class2angle(cls, residual):
 def convex_hull_intersection(p1, p2):
     """ Compute area of two convex hull's intersection area.
         p1,p2 are a list of (x,y) tuples of hull vertices.
-        return a list of (x,y) for the intersection and its volume
+        return the intersection area
     """
-    poly1 = Polygon(p1).convex_hull      # Polygon：多边形对象
+    poly1 = Polygon(p1).convex_hull      # Polygon: polygon object
     poly2 = Polygon(p2).convex_hull
 
     if not poly1.intersects(poly2):
-        inter_area = 0  # 如果两四边形不相交
+        inter_area = 0  # If the two quadrilaterals do not intersect
     else:
-        inter_area = poly1.intersection(poly2).area  # 相交面积
+        inter_area = poly1.intersection(poly2).area  # Intersection area
     return inter_area
 
 def box3d_vol(corners):

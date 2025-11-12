@@ -25,7 +25,7 @@ from detect_anything.modeling.depth_predictor.unidepth_utils import generate_ray
 from torch.utils.tensorboard import SummaryWriter
 import random
 from torch.cuda.amp import GradScaler, autocast
-from contextlib import nullcontext  # Python 3.7+ 提供的空上下文管理器
+from contextlib import nullcontext  # Null context manager provided by Python 3.7+
 from torch.distributed import all_gather_object
 
 def parse_args():
@@ -125,7 +125,7 @@ def train_one_epoch(
                 
                 pred_angles = generate_rays(ret_dict['pred_K'], (image_h, image_w))[1]
                 phi_pred, theta_pred = pred_angles[..., 0], pred_angles[..., 1]
-
+                
                 loss_phi = SILogLoss(phi_pred, phi_gt, coefficient=cfg.loss.phi.coefficient)
                 loss_theta = SILogLoss(theta_pred, theta_gt, coefficient=cfg.loss.theta.coefficient)
                 loss_depth = SILogLoss(ret_dict['depth_maps'], depth_gt, coefficient=cfg.loss.depth.coefficient, masks=masks, log_mode=True)
@@ -216,7 +216,7 @@ def train_one_epoch(
     for k, v in loss_dict_epoch.items():
         loss_dict_epoch[k] /= (iter + 1)
         dist.all_reduce(loss_dict_epoch[k])
-
+    
     if cfg.rank == 0:
         logger.info({'Loss': loss_epoch / cfg.world_size})
         t.set_description(desc="Epoch %i"%epoch)
@@ -397,15 +397,19 @@ def trainval_sam(
                 logger,
             )
             
+            if dist.get_rank() == 0:
+                print(f"\n✨======== EPOCH {epoch} TRAINING COMPLETE ========✨")
+                # Note: Detailed losses are logged via the logger inside train_one_epoch
+            
             if cfg.rank == 0:
                 save_checkpoint({ 
                     'epoch': epoch + 1, 
                     'state_dict': model.module.state_dict(), 
                     'optimizer': optimizer.state_dict(), 
-                    'scheduler': scheduler.state_dict(), # 保存调度器的状态字典 
-                    'scaler': cfg.scaler.state_dict(),  # 保存 AMP 状态
+                    'scheduler': scheduler.state_dict(), # Save the scheduler's state dictionary
+                    'scaler': cfg.scaler.state_dict(),  # Save the AMP state
                     }, cfg.exp_dir, 'checkpoint_{}.pth'.format(epoch))
-                    
+            
             if (epoch + 1) % cfg.eval_interval != 0:
                 continue
 
@@ -420,20 +424,24 @@ def trainval_sam(
                     epoch,
                     logger
                 )
-            
+                # --- ADDED: VALIDATION COMPLETION SUMMARY ---
+                if dist.get_rank() == 0:
+                    print(f"Validation on {dataset_name} complete for Epoch {epoch}.")
+                print("----------------------------------------------------------")
+                
                 if cfg.add_cubercnn_for_ap_inference:
                     dist.barrier()
-                    # 每张卡都有自己的部分结果
-                    local_result = omni3d_result  # 是 list 或 dict 都可以
+                    # Each card has its own partial results
+                    local_result = omni3d_result  # Can be a list or dict
                     all_results = [None for _ in range(dist.get_world_size())]
 
-                    # 所有卡 gather 结果
+                    # All cards gather results
                     all_gather_object(all_results, local_result)
 
                     if dist.get_rank() == 0:
                         final_results = []
                         for r in all_results:
-                            final_results += r  # 或 final_results.append(r) 如果是 dict
+                            final_results += r  # or final_results.append(r) if it's a dict
                         with open(f"{cfg.exp_dir}/{dataset_name}_{cfg.output_json_file}.json", "w") as f:
                             json.dump(final_results, f, indent=4)
                     dist.barrier()
@@ -457,7 +465,7 @@ def main():
         cfg = yaml.load(f.read(), Loader=yaml.FullLoader)
     cfg = Box(cfg)
 
-    # 使用命令行参数覆盖配置文件参数
+    # Override config file parameters with command line arguments
     for key, value in vars(args).items():
         if value is not None:
             setattr(cfg, key, value)
@@ -537,7 +545,7 @@ def main():
         if cfg.resume_scheduler:
             scheduler.load_state_dict(checkpoint['scheduler'])
             optimizer.load_state_dict(checkpoint['optimizer'])
-            cfg.scaler.load_state_dict(checkpoint['scaler']) # 加载 AMP 状态
+            cfg.scaler.load_state_dict(checkpoint['scaler']) # Load AMP state
 
     trainval_sam(cfg, my_sam_model, device_id, start_epoch, optimizer, scheduler, train_loader, val_dataloaders = val_loaders, logger = logger)
 

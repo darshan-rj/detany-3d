@@ -21,11 +21,11 @@ from scipy.optimize import linear_sum_assignment
 
 
 def adjust_brightness(color, factor=1.5, v_min=0.3):
-    """在 HSV 空间调整亮度，避免过暗"""
+    """Adjust brightness in HSV space, avoiding overly dark colors"""
     r, g, b = color
     h, s, v = colorsys.rgb_to_hsv(r, g, b)
-    v = max(v, v_min) * factor  # 强制最低亮度 + 增强
-    v = min(v, 1.0)  # 防止过曝
+    v = max(v, v_min) * factor  # Force minimum brightness + enhancement
+    v = min(v, 1.0)  # Prevent overexposure
     return colorsys.hsv_to_rgb(h, s, v)
 
 def save_point_cloud(depth_map, images, intrinsic_for_vis, filename, h, w):
@@ -33,13 +33,13 @@ def save_point_cloud(depth_map, images, intrinsic_for_vis, filename, h, w):
     保存点云文件。
     
     参数:
-    - depth_map: 深度图数据。
-    - origin_img: 用于得到点云上色的彩色图像。
-    - intrinsic_for_vis: 相机内参矩阵。
-    - filename: 保存点云的文件名。
-    - h, w: 图像的高度和宽度。
+    - depth_map: Depth map data.
+    - images: The color image used for coloring the point cloud.
+    - intrinsic_for_vis: Camera intrinsic matrix.
+    - filename: The filename to save the point cloud.
+    - h, w: The height and width of the image.
     """
-    # 计算点云的三维坐标
+    # Calculate the 3D coordinates of the point cloud
     origin_img = torch.Tensor([58.395, 57.12, 57.375]).view(-1, 1, 1) * images[0].squeeze(0).detach().cpu() + torch.Tensor([123.675, 116.28, 103.53]).view(-1, 1, 1)
     color_image = origin_img.clone()[:, :h, :w].permute(1,2,0)
     color_image = Image.fromarray(color_image.cpu().numpy().astype('uint8'), 'RGB')
@@ -55,13 +55,13 @@ def save_point_cloud(depth_map, images, intrinsic_for_vis, filename, h, w):
     y = (y - BY) / FY
     z = np.array(pred)
     
-    # 生成点云的点坐标
+    # Generate the point coordinates of the point cloud
     points = np.stack((np.multiply(x, z), np.multiply(y, z), z), axis=-1).reshape(-1, 3)
     
-    # 获取彩色图像作为点云的颜色
+    # Get the color image as the color of the point cloud
     colors = np.array(color_image).reshape(-1, 3) / 255.0
     
-    # 创建并保存点云
+    # Create and save the point cloud
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(points)
     pcd.colors = o3d.utility.Vector3dVector(colors)
@@ -71,37 +71,37 @@ def save_color_image(images, h, w, filename):
     保存原始的彩色图像。
     
     参数:
-    - data: 原始的图像数据。
-    - h, w: 图像的高度和宽度。
-    - filename: 保存彩色图像的文件名。
+    - images: The original image data.
+    - h, w: The height and width of the image.
+    - filename: The filename to save the color image.
     """
-    # 恢复经过归一化处理的彩色图像
+    # Restore the color image that has been normalized
     pixel_mean = torch.Tensor([123.675, 116.28, 103.53]).view(-1, 1, 1)
     pixel_std = torch.Tensor([58.395, 57.12, 57.375]).view(-1, 1, 1)
     origin_img = pixel_std * images[0].squeeze(0).detach().cpu() + pixel_mean
     
-    # 裁剪到指定大小并转换为图像格式
+    # Crop to the specified size and convert to image format
     color_image = origin_img[:, :h, :w].permute(1, 2, 0)
     color_image = Image.fromarray(color_image.cpu().numpy().astype('uint8'), 'RGB')
     
-    # 保存彩色图像
+    # Save the color image
     color_image.save(filename)
 def save_depth_image(depth_map, filename, max_depth=None):
     """
     保存深度图为彩色图像。
     
     参数:
-    - depth_map: 深度图数据。
-    - filename: 保存深度图的文件名。
-    - max_depth: 可选，深度图的最大深度值，用于归一化显示。
+    - depth_map: Depth map data.
+    - filename: The filename to save the depth map.
+    - max_depth: Optional, the maximum depth value of the depth map, used for normalization and display.
     """
-    # 克隆深度图并对其进行归一化处理
+    # Clone the depth map and normalize it
     d = depth_map.clone()
 
     if max_depth is None:
-        max_depth = int(d.max())  # 如果未指定最大深度，则使用深度图中的最大值
+        max_depth = int(d.max())  # If max_depth is not specified, use the maximum value in the depth map
     d = colorize(d[0], 0, max_depth)
-    # 保存彩色深度图
+    # Save the colorized depth map
     Image.fromarray(d).save(filename)
 
 def collector(data):
@@ -139,8 +139,8 @@ def configure_opt(cfg, model, train_loader):
     
     optimizer.add_param_group({
         'params': param_list_unidepth,
-        'lr': cfg.opt.unidepth_lr,  # 自定义学习率
-        'weight_decay': cfg.opt.unidepth_weight_decay,  # 自定义权重衰减
+        'lr': cfg.opt.unidepth_lr,  # Custom learning rate
+        'weight_decay': cfg.opt.unidepth_weight_decay,  # Custom weight decay
     })
 
     scheduler =  torch.optim.lr_scheduler.CosineAnnealingLR(optimizer = optimizer,
@@ -239,16 +239,16 @@ def vis_prompt_func(cfg, images, point_coords, K, gt_K, image_h, image_w, pred_m
     
     pixels = np.array(origin_img.permute(1, 2, 0).numpy()).reshape(-1, 3) / 255.0
     pixels = np.clip(pixels, 0, 1)
-    # 改进点1：根据亮度加权采样（避免全随机选到过多暗色）
-    brightness = pixels.mean(axis=1)  # 计算每个像素的亮度
-    prob = brightness / brightness.sum()  # 亮度越高采样概率越大
+    # Improvement 1: Weighted sampling based on brightness (avoids sampling too many dark colors)
+    brightness = pixels.mean(axis=1)  # Calculate brightness for each pixel
+    prob = brightness / brightness.sum()  # Higher brightness means higher sampling probability
     sampled_indices = np.random.choice(pixels.shape[0], 100, p=prob, replace=False)
     sampled_colors = pixels[sampled_indices]
 
-    # 改进点2：按亮度排序而非直接排序
+    # Improvement 2: Sort by brightness instead of direct sorting
     sampled_colors = sorted(sampled_colors, key=lambda c: colorsys.rgb_to_hsv(*c)[2])
 
-    # 应用亮度增强
+    # Apply brightness enhancement
     adjusted_colors = [adjust_brightness(c, factor=2.0, v_min=0.4) for c in sampled_colors]
 
     
@@ -303,7 +303,7 @@ def calculate_pred_pose_for_cubercnn(pred_bbox_3d, pred_rot_mat, device_id):
         yaws = pred_bbox_3d[..., 6:].cpu().numpy()
         yaw_only_rot_mat = np.zeros((yaws.shape[0], 3, 3))
 
-        # 遍历每个 yaw 值，计算旋转矩阵
+        # Iterate over each yaw value to calculate the rotation matrix
         for i in range(yaws.shape[0]):
             angle = yaws[i, 0]
             rotation_matrix = np.array([
@@ -424,4 +424,3 @@ def decode_bboxes_virtual_to_real(ret_dict, cfg, K_gt, K_pred):
     decoded_bboxes_pred_3d = torch.cat([pred_centers_3d, ret_dict['pred_bbox_3d_dims'].exp(), pred_ry], dim=-1)
 
     return decoded_bboxes_pred_2d, decoded_bboxes_pred_3d
-

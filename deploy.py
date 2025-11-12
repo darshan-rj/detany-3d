@@ -28,18 +28,18 @@ with open('./detect_anything/configs/demo.yaml', 'r', encoding='utf-8') as f:
 cfg = Box(cfg)
 
 def generate_image_token(image: Image.Image) -> str:
-    """根据 PIL.Image 生成唯一 Token（SHA-256 哈希值）"""
+    """Generate a unique token (SHA-256 hash) based on a PIL.Image"""
     if isinstance(image, np.ndarray):
-        image = Image.fromarray(image)  # 转换为 PIL.Image
+        image = Image.fromarray(image)  # Convert to PIL.Image
     img_bytes = io.BytesIO()
-    image.save(img_bytes, format='PNG')  # 统一格式，避免存储差异
+    image.save(img_bytes, format='PNG')  # Use a consistent format to avoid storage differences
     return hashlib.sha256(img_bytes.getvalue()).hexdigest()
 
-# 禁用分布式初始化
+# Disable distributed initialization
 torch.distributed.is_available = lambda: False
 torch.distributed.is_initialized = lambda: False
-torch.distributed.get_world_size = lambda group=None: 1  # 总是返回 1，表示单进程模式
-torch.distributed.get_rank = lambda group=None: 0  # 总是返回 rank 0
+torch.distributed.get_world_size = lambda group=None: 1  # Always return 1, indicating single-process mode
+torch.distributed.get_rank = lambda group=None: 0  # Always return rank 0
 
 my_sam_model = WrapModel(cfg)
 checkpoint = torch.load(cfg.resume, map_location=f'cuda:0')
@@ -77,21 +77,21 @@ def crop_hw(img):
         
     if img.dim() == 4:
         img = img.squeeze(0)
-    h, w = img.shape[1:3]  # 假设形状为 [C, H, W]
+    h, w = img.shape[1:3]  # Assuming shape is [C, H, W]
     assert max(h, w) % 112 == 0, "target_size must be divisible by 112"
 
-    # 计算裁剪后尺寸，确保可以被 14 整除
+    # Calculate cropped size, ensuring it is divisible by 14
     new_h = (h // 14) * 14
     new_w = (w // 14) * 14
 
-    # 计算裁剪区域的中心
+    # Calculate the center of the crop area
     center_h, center_w = h // 2, w // 2
 
-    # 计算裁剪的起始和结束索引
+    # Calculate the start and end indices for cropping
     start_h = center_h - new_h // 2
     start_w = center_w - new_w // 2
 
-    # 按照中心裁剪图像和深度图
+    # Crop the image and depth map from the center
     img_cropped = img[:, start_h:start_h + new_h, start_w:start_w + new_w]
     
     return img_cropped.unsqueeze(0)
@@ -121,11 +121,11 @@ def preprocess_dino(x):
     return x
 
 def adjust_brightness(color, factor=1.5, v_min=0.3):
-    """在 HSV 空间调整亮度，避免过暗"""
+    """Adjust brightness in HSV space, avoiding overly dark colors"""
     r, g, b = color
     h, s, v = colorsys.rgb_to_hsv(r, g, b)
-    v = max(v, v_min) * factor  # 强制最低亮度 + 增强
-    v = min(v, 1.0)  # 防止过曝
+    v = max(v, v_min) * factor  # Force minimum brightness + enhancement
+    v = min(v, 1.0)  # Prevent overexposure
     return colorsys.hsv_to_rgb(h, s, v)
 
 def draw_text(im, text, pos, scale=0.4, color='auto', font=cv2.FONT_HERSHEY_SIMPLEX, bg_color=(0, 255, 255),
@@ -164,14 +164,14 @@ def predict(input_dict, text):
 
         pixels = np.array(img).reshape(-1, 3) / 255.0
 
-        # 改进点1：根据亮度加权采样（避免全随机选到过多暗色）
-        brightness = pixels.mean(axis=1)  # 计算每个像素的亮度
-        prob = brightness / brightness.sum()  # 亮度越高采样概率越大
+        # Improvement 1: Weighted sampling based on brightness (avoids sampling too many dark colors)
+        brightness = pixels.mean(axis=1)  # Calculate brightness for each pixel
+        prob = brightness / brightness.sum()  # Higher brightness means higher sampling probability
         sampled_indices = np.random.choice(pixels.shape[0], 100, p=prob, replace=False)
         sampled_colors = pixels[sampled_indices]
-        # 改进点2：按亮度排序而非直接排序
+        # Improvement 2: Sort by brightness instead of direct sorting
         sampled_colors = sorted(sampled_colors, key=lambda c: colorsys.rgb_to_hsv(*c)[2])
-        # 应用亮度增强
+        # Apply brightness enhancement
         adjusted_colors = [adjust_brightness(c, factor=2.0, v_min=0.4) for c in sampled_colors]
 
         if img is None:
@@ -316,11 +316,11 @@ def predict(input_dict, text):
 iface = gr.Interface(
     predict,
     [ImagePrompter(show_label=False),
-    gr.Textbox(label="Please enter the prompt, e.g. a person, seperate different prompt with ' . '")],
+    gr.Textbox(label="Please enter the prompt, e.g. a person, separate different prompts with ' . '")],
     outputs=[
-        gr.Image(),  # 图像输出
+        gr.Image(),  # Image output
     ]
 )
 
-# 启动 Gradio 应用
+# Launch the Gradio app
 iface.launch(share=True, server_port=7861)

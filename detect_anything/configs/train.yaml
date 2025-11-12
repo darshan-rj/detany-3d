@@ -1,9 +1,11 @@
 batch_size: 1
+# num_epochs: 100
 num_epochs: 100
 eval_interval: 100
 inference_only: False
 exp_dir: "./exps/develop"
 resume: False
+# resume: "./checkpoints/detany3d_ckpts/zero_shot_category_ckpt-004.pth"
 resume_scheduler: False
 use_amp: False
 max_depth: 100
@@ -142,48 +144,48 @@ dataset:
     #   metric_scale: 1.
     #   pkl_path: /cpfs01/user/zhanghanxue/segment-anything/data/pkls/omni3d23daw/Hypersim_train.pkl
 
-    # nuscenes:
+    nuscenes:
+      range:
+        begin: 0
+        end: -1
+        interval: 10
+      max_distance: 100
+      min_distance: 0.1
+      metric_scale: 218.45
+      # pkl_path: '/cpfs01/shared/opendrivelab/zhanghanxue/DetAny3D/data/nuscenes/nuscenes_data_train_detany3d_according_to_omni3d.pkl'
+      # pkl_path: '/cpfs01/shared/opendrivelab/zhanghanxue/DetAny3D/data/nuscenes/nuscenes_data_train_detany3d_according_to_omni3d_with_edge_obj.pkl'
+      pkl_path: './data/DA3D_pkls/nuscenes_omni3d_test.pkl'
+      # pkl_path: /cpfs01/user/zhanghanxue/segment-anything/data/pkls/nuscenes_train_filtered.pkl
+
+    # kitti:
     #   range:
     #     begin: 0
     #     end: -1
-    #     interval: 10
+    #     interval: 1
     #   max_distance: 100
     #   min_distance: 0.1
-    #   metric_scale: 218.45
-    #   # pkl_path: '/cpfs01/shared/opendrivelab/zhanghanxue/DetAny3D/data/nuscenes/nuscenes_data_train_detany3d_according_to_omni3d.pkl'
-    #   # pkl_path: '/cpfs01/shared/opendrivelab/zhanghanxue/DetAny3D/data/nuscenes/nuscenes_data_train_detany3d_according_to_omni3d_with_edge_obj.pkl'
-    #   pkl_path: '/cpfs01/user/zhanghanxue/segment-anything/data/pkls/omni3d23daw/nuScenes_train.pkl'
-    #   # pkl_path: /cpfs01/user/zhanghanxue/segment-anything/data/pkls/nuscenes_train_filtered.pkl
-
-    kitti:
-      range:
-        begin: 0
-        end: -1
-        interval: 1
-      max_distance: 100
-      min_distance: 0.1
-      metric_scale: 1.
-      pkl_path: './data/pkls/omni3d23daw/KITTI_train.pkl'
+    #   metric_scale: 1.
+    #   pkl_path: './data/pkls/omni3d23daw/KITTI_train.pkl'
     
-    kitti_val:
-      range:
-        begin: 0
-        end: -1
-        interval: 1
-      max_distance: 100
-      min_distance: 0.1
-      metric_scale: 1.
-      pkl_path: './data/pkls/omni3d23daw/KITTI_val.pkl'
+    # kitti_val:
+    #   range:
+    #     begin: 0
+    #     end: -1
+    #     interval: 1
+    #   max_distance: 100
+    #   min_distance: 0.1
+    #   metric_scale: 1.
+    #   pkl_path: './data/pkls/omni3d23daw/KITTI_val.pkl'
 
-    kitti_test:
-      range:
-        begin: 0
-        end: -1
-        interval: 1
-      max_distance: 100
-      min_distance: 0.1
-      metric_scale: 1.
-      pkl_path: './data/pkls/omni3d23daw/KITTI_test.pkl'
+    # kitti_test:
+    #   range:
+    #     begin: 0
+    #     end: -1
+    #     interval: 1
+    #   max_distance: 100
+    #   min_distance: 0.1
+    #   metric_scale: 1.
+    #   pkl_path: './data/pkls/omni3d23daw/KITTI_test.pkl'
 
     # sunrgbd:
     #   range:
@@ -349,7 +351,7 @@ dataset:
       metric_scale: 218.45
       # pkl_path: '/cpfs01/shared/opendrivelab/zhanghanxue/DetAny3D/data/nuscenes/nuscenes_data_test_detany3d_according_to_omni3d.pkl'
       # pkl_path: '/cpfs01/user/zhanghanxue/segment-anything/data/pkls/omni3d23daw/nuScenes_test.pkl'
-      pkl_path: '/cpfs01/user/zhanghanxue/segment-anything/data/pkls/nuscenes_test_filtered.pkl'
+      pkl_path: './data/DA3D_pkls/omni3d23daw/nuScenes_val.pkl'
 
 
 

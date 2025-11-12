@@ -148,20 +148,20 @@ mask = instance["masks"]
 mask[depth > 20] = 0
 # import ipdb;ipdb.set_trace()
 
-max_depth = np.nanmax(depth[depth != np.inf])  # 获取有效深度的最大值
-# 遍历深度图，绘制点云信息
+max_depth = np.nanmax(depth[depth != np.inf])  # Get the maximum value of effective depth
+# Iterate through the depth map to draw point cloud information
 for i in range(len(depth)):
     # import ipdb;ipdb.set_trace()
     for j in range(len(depth[i])):
-        # 只有在深度有效且通过遮罩的情况下才绘制
+        # Only draw when the depth is valid and passes through the mask
         if depth[i, j] != np.inf and mask[i, j] != 0 and depth[i, j] != 0:
             color = int(depth[i, j] / 80 * 255)
             cv2.circle(todo, (j, i), radius=1, thickness=1, color=(255 - color, color, 0))
-            # # 根据深度值调整颜色，深度越远颜色越接近红色，越近接近绿色
-            depth_ratio = min(depth[i, j] / 20, 1.0)  # 确保深度比在[0, 1]之间
-            color = (0, int(255 * (1 - depth_ratio)), int(255 * depth_ratio))  # 深度颜色映射
+            # # Adjust color based on depth value, the farther the depth, the closer the color is to red, and the closer it is to green
+            depth_ratio = min(depth[i, j] / 20, 1.0)  # Ensure the depth ratio is between [0, 1]
+            color = (0, int(255 * (1 - depth_ratio)), int(255 * depth_ratio))  # Depth color mapping
 
-            # 在图像上绘制点
+            # Draw points on the image
             cv2.circle(todo, (j, i), radius=3, thickness=-1, color=color)
             
 cv2.imwrite('segment_anything/datasets/test_samples/draw_point_cloud_on_img.png', todo)
