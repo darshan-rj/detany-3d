@@ -1,213 +1,118 @@
-> [!IMPORTANT]
-> 🌟 Stay up to date at [opendrivelab.com](https://opendrivelab.com/#news)!
-
 # DetAny3D
 
-This is the official repository for the **[Detect Anything 3D in the Wild](https://arxiv.org/abs/2504.07958)**, a promptable 3D detection foundation model capable of detecting any novel object under arbitrary camera configurations using only monocular inputs
-
-
-<!-- ## 🖼️ Demo Results
-
-Below are example visualizations of DetAny3D predictions:
-
-<p align="center">
-  <img src="assets/demo1.jpg" alt="Demo 1" width="400"/>
-  <img src="assets/demo2.jpg" alt="Demo 2" width="400"/>
-</p>
-
-<p align="center">
-  <img src="assets/demo3.jpg" alt="Demo 3" width="400"/>
-  <img src="assets/demo4.jpg" alt="Demo 4" width="400"/>
-</p> -->
-
-## 📖 Table of Contents
-
-- [📌 TODO](#-todo)
-- [🚀 Getting Started](#-getting-started)
-  - [Step 1: Create Environment](#step-1-create-environment)
-  - [Step 2: Install Dependencies](#step-2-install-dependencies)
-- [📦 Checkpoints](#-checkpoints)
-- [📁 Dataset Preparation](#-dataset-preparation)
-- [🏋️‍♂️ Training](#️-training)
-- [🔍 Inference](#-inference)
-- [🌐 Launch Online Demo](#-launch-online-demo)
-- [📚 Citation](#-citation)
-
-
-## 📌 TODO
-
-### ✅ Done
-- Release full code
-- Provide training and inference scripts
-- Release the model weights
-
-### 🛠️ In Progress
-- **TODO**: Provide full conversion scripts for constructing DA3D locally
-- **TODO**: Simplify the inference process
-- **TODO**: Provide a tutorial for creating customized datasets and finetuning
-
-
-## 🚀 Getting Started
-
-### Step 1: Create Environment
-
-```
-conda create -n detany3d python=3.8
-conda activate detany3d
-```
+Promptable 3D detection foundation model for monocular images. This repository contains code for training, inference, and deployment of the DetAny3D system.
 
 ---
 
-### Step 2: Install Dependencies
+Recent repository changes detected (automated scan):
+- Duplicate README content consolidated into this file.
+- `deploy_streamlit_test.py` appears to have been removed from the tree.
 
-#### ✅ (1) Install [Segment Anything (SAM)](https://github.com/facebookresearch/segment-anything)
+If any of these notes are incorrect, please tell me and I will adjust the README accordingly.
 
-Follow the official instructions to install SAM and download its checkpoints.
+## What this repo contains
+- `detect_anything/` — model implementation, configs, datasets, and utilities.
+- `modeling/` — image encoder, transformer, prompt & mask modules.
+- `train.py`, `train_utils.py`, `wrap_model.py` — training and model wrappers.
+- `deploy.py`, `deploy_streamlit.py`, `app.py` — demo and deployment scripts.
+- `custom_dataset_preparation/` — dataset conversion helpers.
+- `data/` — expected dataset files and `DA3D_pkls/` for minimal inference metadata.
 
-#### ✅ (2) Install [UniDepth](https://github.com/lpiccinelli-eth/UniDepth)
+## Quickstart (minimal)
 
-Follow the UniDepth setup guide to compile and install all necessary packages.
+1) Create the environment (Windows / PowerShell):
 
-#### ✅ (3) Clone and configure [GroundingDINO](https://github.com/IDEA-Research/GroundingDINO)
-
+```powershell
+conda create -n detany3d python=3.8; conda activate detany3d
 ```
-git clone https://github.com/IDEA-Research/GroundingDINO.git
-cd GroundingDINO
-pip install -e .
+
+2) Install key third-party projects (SAM, UniDepth, GroundingDINO) per their instructions. Example for GroundingDINO:
+
+```powershell
+git clone https://github.com/IDEA-Research/GroundingDINO.git; cd GroundingDINO; pip install -e .
 ```
 
-> 👉 The exact dependency versions are listed in our `requirements.txt`
+3) Install Python dependencies for this repo:
 
+```powershell
+pip install -r requirements.txt
+```
 
-## 📦 Checkpoints
-
-Please download third-party checkpoints from the following sources:
-
-- **SAM checkpoint**: Please download `sam_vit_h.pth` from the official [SAM GitHub Releases](https://github.com/facebookresearch/segment-anything)
-- **UniDepth / DINO checkpoints**: Available via [Google Drive](https://drive.google.com/drive/folders/17AOq5i1pCTxYzyqb1zbVevPy5jAXdNho?usp=drive_link)
+4) Place checkpoints in a private folder (example layout):
 
 ```
 detany3d_private/
-├── checkpoints/
-│   ├── sam_ckpts/
-│   │   └── sam_vit_h.pth
-│   ├── unidepth_ckpts/
-│   │   └── unidepth.pth
-│   ├── dino_ckpts/
-│   │   └── dino_swin_large.pth
-│   └── detany3d_ckpts/
-│       └── detany3d.pth
+└── checkpoints/
+    ├── sam_ckpts/sam_vit_h.pth
+    ├── unidepth_ckpts/unidepth.pth
+    ├── dino_ckpts/dino_swin_large.pth
+    └── detany3d_ckpts/detany3d.pth
 ```
 
-> GroundingDINO's checkpoint should be downloaded from its [official repo](https://github.com/IDEA-Research/GroundingDINO) and placed as instructed in their documentation.
+## Data layout (expected)
 
-
-## 📁 Dataset Preparation
-
-The `data/` directory should follow the structure below:
+Follow the Omni3D conventions where applicable. Minimal folders the code expects under `data/`:
 
 ```
 data/
-├── DA3D_pkls/                             # DA3D processed pickle files 
+├── DA3D_pkls/
 ├── kitti/
-│   ├── test_depth_front/
-│   ├── ImageSets/
-│   ├── training/
-│   └── testing/
 ├── nuscenes/
-|   ├── nuscenes_depth/
-│   └── samples/
-├── 3RScan/
-│   └── <token folders>/             # e.g., 10b17940-3938-...
 ├── hypersim/
-|   ├── depth_in_meter/
-│   └── ai_XXX_YYY/                  # e.g., ai_055_009
 ├── waymo/
-│   └── kitti_format/                # KITTI-format data for Waymo
-│       ├── validation_depth_front/
-│       ├── ImageSets/
-│       ├── training/
-│       └── testing/
 ├── objectron/
-│   ├── train/
-│   └── test/
-├── ARKitScenes/
-│   ├── Training/
-│   └── Validation/
-├── cityscapes3d/
-│   ├── depth/
-│   └── leftImg8bit/
-├── SUNRGBD/
-│   ├── realsense/
-│   ├── xtion/
-|   ├── kv1/
-│   └── kv2/
+└── SUNRGBD/
 ```
 
-> The download for `kitti`, `nuscenes`, `hypersim`, `objectron`, `arkitscenes`, and `sunrgbd` follow the [Omni3D](https://github.com/facebookresearch/omni3d) convention. Please refer to the Omni3D repository for details on how to organize and preprocess these datasets.
+Note: Depth files are not required for inference. To skip depth loading, set `depth_path = None` in `detect_anything/datasets/detany3d_dataset.py`.
 
-> 🗂️ The `DA3D_pkls` (minimal metadata for inference) can be downloaded from [Google Drive](https://drive.google.com/drive/folders/17AOq5i1pCTxYzyqb1zbVevPy5jAXdNho?usp=drive_link).  
-> 🧩 **Note**: This release currently supports a minimal inference-only version. The conversion scripts of full dataset + all depth-related files will be provided later.
+## Common commands
 
-> ⚠️ Depth files are not required for inference. You can safely set `depth_path = None` in [detany3d_dataset.py](./detect_anything/datasets/detany3d_dataset.py) to bypass depth loading.  
+- Train (distributed example — adapt env vars for your cluster):
 
-
-
-## 🏋️‍♂️ Training
-
-```
-torchrun \
-    --nproc_per_node=8 \
-    --master_addr=${MASTER_ADDR} \
-    --master_port=${MASTER_PORT} \
-    --nnodes=8 \
-    --node_rank=${RANK} \
-    ./train.py \
-    --config_path \
-    ./detect_anything/configs/train.yaml
+```powershell
+torchrun --nproc_per_node=8 --master_addr=${MASTER_ADDR} --master_port=${MASTER_PORT} --nnodes=8 --node_rank=${RANK} ./train.py --config_path ./detect_anything/configs/train.yaml
 ```
 
+- Run inference (example):
 
-## 🔍 Inference
-
-```
-torchrun \
-    --nproc_per_node=8 \
-    --master_addr=${MASTER_ADDR} \
-    --master_port=${MASTER_PORT} \
-    --nnodes=1 \
-    --node_rank=${RANK} \
-    ./train.py \
-    --config_path \
-    ./detect_anything/configs/inference_indomain_gt_prompt.yaml
+```powershell
+torchrun --nproc_per_node=8 --master_addr=${MASTER_ADDR} --master_port=${MASTER_PORT} --nnodes=1 --node_rank=${RANK} ./train.py --config_path ./detect_anything/configs/inference_indomain_gt_prompt.yaml
 ```
 
+After inference you will find `{dataset}_output_results.json` under `exps/<your_exp_dir>/`.
 
-After inference, a file named `{dataset}_output_results.json` will be generated in the `exps/<your_exp_dir>/` directory.
+## Launch demo
 
-> ⚠️ Due to compatibility issues between `pytorch3d` and the current environment, we recommend copying the output JSON file into the evaluation script of repositories like [Omni3D](https://github.com/facebookresearch/omni3d) or [OVMono3D](https://github.com/UVA-Computer-Vision-Lab/ovmono3d) for standardized metric evaluation.
+- Local demo server:
 
-> **TODO**: Evaluation for zero-shot datasets currently requires manual modification of the Omni3D or OVMono3D repositories and is not yet fully supported here.   
-We plan to release a merged evaluation script in this repository to make direct evaluation more convenient in the future.
-
-
-
-## 🌐 Launch Online Demo
-
-```
+```powershell
 python ./deploy.py
 ```
 
+- Streamlit demo:
 
-## 📚 Citation
-
-If you find this repository useful, please consider citing:
-
+```powershell
+python ./deploy_streamlit.py
 ```
-@article{zhang2025detect,
-  title={Detect Anything 3D in the Wild},
-  author={Zhang, Hanxue and Jiang, Haoran and Yao, Qingsong and Sun, Yanan and Zhang, Renrui and Zhao, Hao and Li, Hongyang and Zhu, Hongzi and Yang, Zetong},
-  journal={arXiv preprint arXiv:2504.07958},
-  year={2025}
-}
-```
+
+## Development notes
+
+- The project integrates external codebases (SAM, GroundingDINO, UniDepth). Follow each project's install instructions to avoid compatibility issues.
+- Configurations live in `detect_anything/configs/` — copy and adapt these YAMLs for experiments.
+- If you plan to run only inference, use `DA3D_pkls` and avoid large dataset downloads.
+
+## Detected repo maintenance actions you might want
+
+- Commit this README consolidation and push to a feature branch if you want review.
+- If `deploy_streamlit_test.py` was intentionally removed but should be preserved, restore it from backup or git history.
+
+If you'd like, I can also:
+- create a small `CONTRIBUTING.md`,
+- add a short `docs/` page for dataset conversion, or
+- create a branch and open a PR with this README change.
+
+---
+
+If this looks good, I will finalize the change (commit/PR) or adapt it further — tell me which next step you prefer.
+
