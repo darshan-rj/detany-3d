@@ -102,17 +102,3 @@ python ./deploy_streamlit.py
 - Configurations live in `detect_anything/configs/` — copy and adapt these YAMLs for experiments.
 - If you plan to run only inference, use `DA3D_pkls` and avoid large dataset downloads.
 
-## Detected repo maintenance actions you might want
-
-- Commit this README consolidation and push to a feature branch if you want review.
-- If `deploy_streamlit_test.py` was intentionally removed but should be preserved, restore it from backup or git history.
-
-If you'd like, I can also:
-- create a small `CONTRIBUTING.md`,
-- add a short `docs/` page for dataset conversion, or
-- create a branch and open a PR with this README change.
-
----
-
-If this looks good, I will finalize the change (commit/PR) or adapt it further — tell me which next step you prefer.
-
